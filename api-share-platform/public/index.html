@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KeyVault — API Key Sharing Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a38;
+    --accent: #7c3aed;
+    --accent2: #06b6d4;
+    --accent3: #f59e0b;
+    --text: #e8e8f0;
+    --muted: #6b7280;
+    --danger: #ef4444;
+    --success: #10b981;
+    --font-display: 'Syne', sans-serif;
+    --font-mono: 'Space Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,58,237,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,58,237,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .glow-orb {
+    position: fixed;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+    top: -200px; left: -200px;
+    animation: drift 12s ease-in-out infinite alternate;
+  }
+  .glow-orb2 {
+    position: fixed;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(6,182,212,0.08) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+    bottom: -100px; right: -100px;
+    animation: drift2 15s ease-in-out infinite alternate;
+  }
+
+  @keyframes drift { to { transform: translate(80px, 60px); } }
+  @keyframes drift2 { to { transform: translate(-60px, -40px); } }
+
+  .wrapper { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+
+  /* Header */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 0 40px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+  }
+  .logo {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, #7c3aed, #06b6d4);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .logo span { color: var(--accent3); -webkit-text-fill-color: var(--accent3); }
+
+  .badge {
+    background: rgba(124,58,237,0.15);
+    border: 1px solid rgba(124,58,237,0.3);
+    color: #a78bfa;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px;
+    margin-bottom: 32px;
+    width: fit-content;
+  }
+  .tab {
+    padding: 10px 24px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 1px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+  .tab.active {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 0 20px rgba(124,58,237,0.4);
+  }
+  .tab:hover:not(.active) { color: var(--text); background: var(--surface2); }
+
+  /* Panels */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .card:hover { border-color: rgba(124,58,237,0.4); }
+  .card:hover::before { opacity: 1; }
+
+  .card-title {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .card-title .icon {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+  .icon-purple { background: rgba(124,58,237,0.2); }
+  .icon-cyan { background: rgba(6,182,212,0.2); }
+  .icon-amber { background: rgba(245,158,11,0.2); }
+
+  /* Form elements */
+  .form-row { display: grid; gap: 16px; margin-bottom: 16px; }
+  .form-row.cols-2 { grid-template-columns: 1fr 1fr; }
+  .form-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+  label {
+    display: block;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  input, select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input:focus, select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.15);
+  }
+  input::placeholder { color: var(--muted); }
+
+  /* Buttons */
+  .btn {
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 4px 20px rgba(124,58,237,0.3);
+  }
+  .btn-primary:hover { background: #6d28d9; box-shadow: 0 4px 30px rgba(124,58,237,0.5); transform: translateY(-1px); }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-danger {
+    background: rgba(239,68,68,0.15);
+    color: var(--danger);
+    border: 1px solid rgba(239,68,68,0.3);
+  }
+  .btn-danger:hover { background: rgba(239,68,68,0.25); }
+
+  .btn-sm { padding: 7px 14px; font-size: 11px; }
+
+  /* Token list */
+  .token-list { display: flex; flex-direction: column; gap: 12px; }
+
+  .token-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+    transition: border-color 0.2s;
+  }
+  .token-item:hover { border-color: rgba(124,58,237,0.3); }
+  .token-item.revoked { opacity: 0.5; }
+
+  .token-info { display: flex; flex-direction: column; gap: 6px; }
+  .token-label {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--text);
+  }
+  .token-meta {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .meta-chip {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .meta-chip.service { color: var(--accent2); border-color: rgba(6,182,212,0.3); }
+  .meta-chip.active-chip { color: var(--success); border-color: rgba(16,185,129,0.3); }
+  .meta-chip.revoked-chip { color: var(--danger); border-color: rgba(239,68,68,0.3); }
+
+  .token-code {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: color 0.2s;
+    width: fit-content;
+  }
+  .token-code:hover { color: var(--accent2); border-color: var(--accent2); }
+
+  .usage-bar-wrap { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+  .usage-bar {
+    flex: 1;
+    height: 4px;
+    background: var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    max-width: 140px;
+  }
+  .usage-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 4px;
+    transition: width 0.4s;
+  }
+  .usage-text { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+  .token-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+  /* Alert / response box */
+  .alert {
+    padding: 14px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    margin-top: 16px;
+    display: none;
+    animation: fadeIn 0.3s ease;
+  }
+  .alert.success { background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7; }
+  .alert.error   { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.3);  color: #fca5a5; }
+  .alert.info    { background: rgba(6,182,212,0.1);  border: 1px solid rgba(6,182,212,0.3);  color: #67e8f9; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Token check section */
+  .info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .info-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+  }
+  .info-box .val {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--accent2);
+    margin-bottom: 4px;
+  }
+  .info-box .key { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+
+  /* Copy notification */
+  .copy-toast {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: var(--success);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    z-index: 1000;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.3s;
+    pointer-events: none;
+  }
+  .copy-toast.show { opacity: 1; transform: translateY(0); }
+
+  /* Password section */
+  .pwd-section {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-end;
+  }
+  .pwd-section > div { flex: 1; }
+
+  .section-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 28px 0;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .section-divider::before, .section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
+  .empty-state .emoji { font-size: 48px; margin-bottom: 16px; }
+  .empty-state p { font-size: 14px; line-height: 1.8; }
+
+  /* How to use section */
+  .steps { display: grid; gap: 16px; }
+  .step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .step-num {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+  .step-content { flex: 1; }
+  .step-title { font-family: var(--font-display); font-weight: 600; margin-bottom: 4px; }
+  .step-desc { font-size: 12px; color: var(--muted); line-height: 1.7; }
+  code {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 11px;
+    color: var(--accent2);
+  }
+
+  @media (max-width: 640px) {
+    .form-row.cols-2, .form-row.cols-3 { grid-template-columns: 1fr; }
+    .token-item { grid-template-columns: 1fr; }
+    .token-actions { justify-content: flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="glow-orb"></div>
+<div class="glow-orb2"></div>
+<div class="copy-toast" id="copyToast">✓ Copied to clipboard!</div>
+
+<div class="wrapper">
+  <header>
+    <div class="logo">Key<span>Vault</span></div>
+    <div class="badge">⚡ AIML Project</div>
+  </header>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('admin')">🔐 Admin Panel</button>
+    <button class="tab" onclick="switchTab('user')">🔑 Use a Token</button>
+    <button class="tab" onclick="switchTab('guide')">📖 How It Works</button>
+  </div>
+
+  <!-- ─── ADMIN PANEL ─────────────────────────────────────── -->
+  <div class="panel active" id="panel-admin">
+
+    <!-- Password -->
+    <div class="pwd-section">
+      <div>
+        <label>Admin Password</label>
+        <input type="password" id="adminPwd" placeholder="Enter admin password (default: admin123)" />
+      </div>
+      <button class="btn btn-secondary" onclick="loadTokens()">🔄 Load My Tokens</button>
+    </div>
+
+    <!-- Create Token -->
+    <div class="card">
+      <div class="card-title">
+        <div class="icon icon-purple">➕</div>
+        Share a New API Key
+      </div>
+      <div class="form-row cols-2">
+        <div>
+          <label>Label / Name</label>
+          <input type="text" id="c_label" placeholder="e.g. My OpenAI Key for Rahul" />
+        </div>
+        <div>
+          <label>Service / Platform</label>
+          <input type="text" id="c_service" placeholder="e.g. OpenAI, Gemini, Hugging Face" />
+        </div>
+      </div>
+      <div class="form-row cols-2">
+        <div>
+          <label>API Key (kept secret from users)</label>
+          <input type="password" id="c_apikey" placeholder="sk-••••••••••••••••" />
+        </div>
+        <div>
+          <label>Max API Calls Allowed</label>
+          <input type="number" id="c_maxcalls" value="100" min="1" />
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="createToken()">✦ Generate Share Token</button>
+      <div class="alert" id="createAlert"></div>
+    </div>
+
+    <!-- Token List -->
+    <div class="section-divider">Your Shared Tokens</div>
+
+    <div id="tokenList">
+      <div class="empty-state">
+        <div class="emoji">🔒</div>
+        <p>Enter your admin password above<br/>and click <strong>Load My Tokens</strong></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── USER PANEL ─────────────────────────────────────── -->
+  <div class="panel" id="panel-user">
+    <div class="card">
+      <div class="card-title">
+        <div class="icon icon-cyan">🔍</div>
+        Check Token Info
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Your Share Token (given by key owner)</label>
+          <input type="text" id="u_token_check" placeholder="Paste your UUID token here..." />
+        </div>
+      </div>
+      <button class="btn btn-secondary" onclick="checkToken()">Check Token</button>
+      <div id="tokenInfoBox"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <div class="icon icon-amber">⚡</div>
+        Retrieve API Key
+      </div>
+      <p style="font-size:13px; color:var(--muted); margin-bottom:16px;">
+        This will consume one call from your quota. Use it when your app needs the actual key.
+      </p>
+      <div class="form-row cols-2">
+        <div>
+          <label>Your Share Token</label>
+          <input type="text" id="u_token_use" placeholder="Paste your UUID token here..." />
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="useToken()">⚡ Get API Key</button>
+      <div class="alert" id="useAlert"></div>
+    </div>
+  </div>
+
+  <!-- ─── GUIDE PANEL ─────────────────────────────────────── -->
+  <div class="panel" id="panel-guide">
+    <div class="card">
+      <div class="card-title">
+        <div class="icon icon-purple">📖</div>
+        How KeyVault Works
+      </div>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <div class="step-title">You add your API key (Admin)</div>
+            <div class="step-desc">Go to the Admin Panel → paste your key (OpenAI, Gemini, etc), give it a label, set the max call limit, and click Generate. The platform creates a unique share token.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <div class="step-title">Share the token (not the key)</div>
+            <div class="step-desc">Send the UUID token to your friend / classmate. They never see your actual API key — only the token.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <div class="step-title">Friend uses the token in their code</div>
+            <div class="step-desc">They call <code>POST /api/token/&lt;token&gt;/use</code> from their project. The server returns the API key and deducts one call from the quota.</div>
+          </div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <div class="step-title">You monitor and control</div>
+            <div class="step-desc">Track usage, reset counters, or revoke tokens instantly from the Admin Panel. Perfect for group projects, hackathons, or sharing with classmates.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <div class="icon icon-cyan">💻</div>
+        Use in Your Code (fetch example)
+      </div>
+      <pre style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:20px;font-size:12px;color:#67e8f9;overflow-x:auto;line-height:1.8"><code>// In your friend's project:
+const res = await fetch('http://localhost:3000/api/token/YOUR_TOKEN/use', {
+  method: 'POST'
+});
+const data = await res.json();
+const apiKey = data.apiKey; // ← use this in your API call!</code></pre>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <div class="icon icon-amber">🔌</div>
+        API Endpoints Reference
+      </div>
+      <div style="display:grid;gap:10px;font-size:12px;">
+        <div style="display:flex;gap:16px;padding:10px;background:var(--surface2);border-radius:8px;">
+          <span style="color:var(--success);font-weight:700;min-width:50px">GET</span>
+          <span style="color:var(--muted);">/api/token/:token/info</span>
+          <span style="color:var(--text);margin-left:auto">Check token status & remaining calls</span>
+        </div>
+        <div style="display:flex;gap:16px;padding:10px;background:var(--surface2);border-radius:8px;">
+          <span style="color:var(--accent3);font-weight:700;min-width:50px">POST</span>
+          <span style="color:var(--muted);">/api/token/:token/use</span>
+          <span style="color:var(--text);margin-left:auto">Retrieve API key (uses 1 call)</span>
+        </div>
+        <div style="display:flex;gap:16px;padding:10px;background:var(--surface2);border-radius:8px;">
+          <span style="color:var(--accent3);font-weight:700;min-width:50px">POST</span>
+          <span style="color:var(--muted);">/api/admin/create</span>
+          <span style="color:var(--text);margin-left:auto">Create a new share token (admin)</span>
+        </div>
+        <div style="display:flex;gap:16px;padding:10px;background:var(--surface2);border-radius:8px;">
+          <span style="color:var(--success);font-weight:700;min-width:50px">GET</span>
+          <span style="color:var(--muted);">/api/admin/list</span>
+          <span style="color:var(--text);margin-left:auto">List all tokens (admin)</span>
+        </div>
+        <div style="display:flex;gap:16px;padding:10px;background:var(--surface2);border-radius:8px;">
+          <span style="color:var(--danger);font-weight:700;min-width:50px">DELETE</span>
+          <span style="color:var(--muted);">/api/admin/revoke/:token</span>
+          <span style="color:var(--text);margin-left:auto">Revoke a token (admin)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Helpers ────────────────────────────────────────────────────────────────
+function pwd() { return document.getElementById('adminPwd').value; }
+
+function showAlert(id, msg, type) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.className = `alert ${type}`;
+  el.style.display = 'block';
+  setTimeout(() => el.style.display = 'none', 6000);
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    const t = document.getElementById('copyToast');
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+  });
+}
+
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById(`panel-${name}`).classList.add('active');
+}
+
+// ─── Admin: Create Token ────────────────────────────────────────────────────
+async function createToken() {
+  const label = document.getElementById('c_label').value.trim();
+  const service = document.getElementById('c_service').value.trim();
+  const apiKey = document.getElementById('c_apikey').value.trim();
+  const maxCalls = parseInt(document.getElementById('c_maxcalls').value) || 100;
+
+  if (!label || !service || !apiKey) {
+    return showAlert('createAlert', '⚠ Please fill in all fields.', 'error');
+  }
+
+  try {
+    const res = await fetch('/api/admin/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-password': pwd() },
+      body: JSON.stringify({ apiKey, label, service, maxCalls })
+    });
+    const data = await res.json();
+    if (!res.ok) return showAlert('createAlert', '❌ ' + data.error, 'error');
+    showAlert('createAlert', `✅ Token created! Share this → ${data.token} (click to copy)`, 'success');
+    document.getElementById('createAlert').style.cursor = 'pointer';
+    document.getElementById('createAlert').onclick = () => copyText(data.token);
+    loadTokens();
+  } catch (e) {
+    showAlert('createAlert', '❌ Server error: ' + e.message, 'error');
+  }
+}
+
+// ─── Admin: Load Tokens ─────────────────────────────────────────────────────
+async function loadTokens() {
+  try {
+    const res = await fetch('/api/admin/list', {
+      headers: { 'x-admin-password': pwd() }
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      document.getElementById('tokenList').innerHTML = `
+        <div class="empty-state"><div class="emoji">🔒</div><p>${data.error}</p></div>`;
+      return;
+    }
+    renderTokens(data.tokens);
+  } catch (e) {
+    document.getElementById('tokenList').innerHTML =
+      `<div class="empty-state"><div class="emoji">❌</div><p>Could not connect to server.</p></div>`;
+  }
+}
+
+function renderTokens(tokens) {
+  const el = document.getElementById('tokenList');
+  if (!tokens.length) {
+    el.innerHTML = `<div class="empty-state"><div class="emoji">📭</div><p>No tokens yet. Create one above!</p></div>`;
+    return;
+  }
+  el.innerHTML = `<div class="token-list">${tokens.map(t => {
+    const pct = Math.min(100, Math.round((t.usedCalls / t.maxCalls) * 100));
+    return `
+    <div class="token-item ${!t.active ? 'revoked' : ''}">
+      <div class="token-info">
+        <div class="token-label">${t.label}</div>
+        <div class="token-meta">
+          <span class="meta-chip service">${t.service}</span>
+          <span class="meta-chip ${t.active ? 'active-chip' : 'revoked-chip'}">${t.active ? '✓ Active' : '✗ Revoked'}</span>
+          <span class="meta-chip">Key: ${t.apiKeyMasked}</span>
+        </div>
+        <div class="token-code" onclick="copyText('${t.token}')" title="Click to copy">
+          📋 ${t.token.slice(0,8)}…${t.token.slice(-6)}
+        </div>
+        <div class="usage-bar-wrap">
+          <div class="usage-bar"><div class="usage-fill" style="width:${pct}%"></div></div>
+          <span class="usage-text">${t.usedCalls} / ${t.maxCalls} calls</span>
+        </div>
+      </div>
+      <div class="token-actions">
+        ${t.active ? `<button class="btn btn-secondary btn-sm" onclick="resetUsage('${t.token}')">↺ Reset</button>
+        <button class="btn btn-danger btn-sm" onclick="revokeToken('${t.token}')">⊘ Revoke</button>` : ''}
+        <button class="btn btn-danger btn-sm" onclick="deleteToken('${t.token}')">🗑 Delete</button>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+async function revokeToken(token) {
+  if (!confirm('Revoke this token? Users will no longer be able to use it.')) return;
+  await fetch(`/api/admin/revoke/${token}`, { method: 'DELETE', headers: { 'x-admin-password': pwd() } });
+  loadTokens();
+}
+
+async function deleteToken(token) {
+  if (!confirm('Permanently delete this token?')) return;
+  await fetch(`/api/admin/delete/${token}`, { method: 'DELETE', headers: { 'x-admin-password': pwd() } });
+  loadTokens();
+}
+
+async function resetUsage(token) {
+  await fetch(`/api/admin/reset/${token}`, { method: 'POST', headers: { 'x-admin-password': pwd() } });
+  loadTokens();
+}
+
+// ─── User: Check Token ──────────────────────────────────────────────────────
+async function checkToken() {
+  const token = document.getElementById('u_token_check').value.trim();
+  if (!token) return;
+  try {
+    const res = await fetch(`/api/token/${token}/info`);
+    const data = await res.json();
+    const box = document.getElementById('tokenInfoBox');
+    if (!res.ok) {
+      box.innerHTML = `<div class="alert error" style="display:block;margin-top:16px;">❌ ${data.error}</div>`;
+      return;
+    }
+    const pct = Math.min(100, Math.round((data.usedCalls / data.maxCalls) * 100));
+    box.innerHTML = `
+      <div class="info-grid">
+        <div class="info-box"><div class="val">${data.service}</div><div class="key">Service</div></div>
+        <div class="info-box"><div class="val">${data.remainingCalls}</div><div class="key">Calls Left</div></div>
+        <div class="info-box"><div class="val">${data.maxCalls}</div><div class="key">Total Quota</div></div>
+        <div class="info-box"><div class="val">${data.active ? '✓' : '✗'}</div><div class="key">${data.active ? 'Active' : 'Revoked'}</div></div>
+      </div>
+      <div class="usage-bar-wrap" style="margin-top:16px;gap:12px">
+        <div class="usage-bar" style="max-width:100%;flex:1"><div class="usage-fill" style="width:${pct}%"></div></div>
+        <span class="usage-text">${data.usedCalls} used / ${data.maxCalls} total</span>
+      </div>`;
+  } catch (e) {
+    document.getElementById('tokenInfoBox').innerHTML =
+      `<div class="alert error" style="display:block;margin-top:16px;">❌ Server error.</div>`;
+  }
+}
+
+// ─── User: Use Token ────────────────────────────────────────────────────────
+async function useToken() {
+  const token = document.getElementById('u_token_use').value.trim();
+  if (!token) return showAlert('useAlert', '⚠ Enter your token.', 'error');
+  try {
+    const res = await fetch(`/api/token/${token}/use`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) return showAlert('useAlert', '❌ ' + data.error, 'error');
+    showAlert('useAlert',
+      `✅ API Key retrieved! (${data.callsRemaining} calls left)\n🔑 ${data.apiKey} — click to copy`, 'success');
+    document.getElementById('useAlert').style.cursor = 'pointer';
+    document.getElementById('useAlert').onclick = () => copyText(data.apiKey);
+  } catch (e) {
+    showAlert('useAlert', '❌ Server error: ' + e.message, 'error');
+  }
+}
+</script>
+</body>
+</html>
